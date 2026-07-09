@@ -1,822 +1,710 @@
 """
 ============================================================
-app.py  ─  Fake News Detection using Machine Learning
+app.py — Fake News Detection using Machine Learning
 ============================================================
-Author      : Govardhan N
-Project     : Fake News Detection using Machine Learning
-Description : Professional AI-powered chatbot + image OCR
-              fake news detector. Supports:
-                • Text / chat input
-                • Image upload  (newspaper, screenshot, etc.)
-              Runs in Demo Mode until a trained model is saved.
+Advanced ML-powered news verification platform
+Sky Blue + White corporate theme
+Real-time text analytics, sentiment, readability scoring
+3 Tabs: Text Analysis | Image OCR | URL Analysis
 ============================================================
 """
 
-import os, re, time, io, warnings
+import os, re, time, math, warnings
 warnings.filterwarnings("ignore")
 
 import joblib
 import streamlit as st
 from PIL import Image
-from preprocess import preprocess_text
+
+try:
+    from preprocess import preprocess_text
+except Exception:
+    def preprocess_text(t): return t.lower()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Page config  (MUST be first Streamlit call)
+# Page Config
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title = "Fake News Detection using Machine Learning",
-    page_icon  = "🔍",
-    layout     = "wide",
-    initial_sidebar_state = "expanded",
+    page_title="Fake News Detection using Machine Learning",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ██  CSS  ── dark glassmorphism theme
+# CSS — Sky Blue + White Theme
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown(r"""
+st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-:root{
-  --bg0:#07090f;--bg1:#0d1117;--bg2:#161b27;--bg3:#1e2538;
-  --blue:#4f8ef7;--purple:#9b72f7;--green:#22d3a5;--red:#f05a6e;
-  --yellow:#f5a623;--cyan:#38bdf8;
-  --txt:#e8edf5;--muted:#6b7a99;
-  --border:rgba(255,255,255,0.07);
-  --glass:rgba(255,255,255,0.03);
-  --shadow:0 8px 32px rgba(0,0,0,.55);
+*, *::before, *::after { box-sizing: border-box; }
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    color: #0f172a !important;
+}
+.stApp { background: #ffffff !important; }
+#MainMenu, footer, header { visibility: hidden; }
+[data-testid="stSidebar"]        { display: none; }
+[data-testid="collapsedControl"] { display: none; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #f0f9ff; }
+::-webkit-scrollbar-thumb { background: #7dd3fc; border-radius: 99px; }
+
+.block-container { padding: 1rem 2.5rem 2rem !important; max-width: 1240px !important; }
+
+/* ═══════ HEADER ═══════ */
+.header {
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8, #7dd3fc);
+    border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 24px rgba(14,165,233,.18);
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-icon {
+    width: 52px; height: 52px; background: rgba(255,255,255,.2);
+    backdrop-filter: blur(10px); border-radius: 14px; border: 1px solid rgba(255,255,255,.3);
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+.header-title {
+    font-size: 1.2rem; font-weight: 800; color: #fff;
+    letter-spacing: -.3px; text-shadow: 0 1px 2px rgba(0,0,0,.1);
+}
+.header-sub { font-size: .72rem; color: rgba(255,255,255,.85); margin-top: 2px; font-weight: 400; }
+.header-badges { display: flex; gap: 8px; align-items: center; }
+.h-badge {
+    font-size: .68rem; font-weight: 600; padding: 5px 14px; border-radius: 99px;
+    backdrop-filter: blur(8px); letter-spacing: .3px;
+}
+.hb-ml { background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+.hb-live { background: rgba(16,185,129,.2); color: #ecfdf5; border: 1px solid rgba(16,185,129,.4); }
+.hb-demo { background: rgba(251,191,36,.2); color: #fffbeb; border: 1px solid rgba(251,191,36,.4); }
+
+/* ═══════ KPI CARDS ═══════ */
+.kpi-row { display: flex; gap: 12px; margin-bottom: 22px; }
+.kpi-card {
+    flex: 1; background: #f0f9ff; border: 1px solid #e0f2fe;
+    border-radius: 12px; padding: 16px 18px; text-align: center;
+    transition: all .2s ease; cursor: default;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(14,165,233,.1); }
+.kpi-val { font-size: 1.7rem; font-weight: 900; color: #0f172a; }
+.kpi-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase;
+           letter-spacing: 1px; color: #64748b; margin-top: 3px; }
+
+/* ═══════ TABS ═══════ */
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    margin-bottom: 22px !important;
+    padding-bottom: 0px !important;
+    gap: 8px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    font-size: .85rem !important;
+    font-weight: 600 !important; 
+    color: #475569 !important;
+    background: transparent !important; 
+    border: none !important;
+    border-radius: 6px 6px 0 0 !important;
+    padding: 10px 24px !important; 
+    transition: all .2s ease !important;
+}
+/* Force text color on inner elements */
+.stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span {
+    color: #475569 !important;
+}
+.stTabs [aria-selected="true"], .stTabs [aria-selected="true"] p {
+    background: #0066cc !important; 
+    color: #ffffff !important; 
+    font-weight: 700 !important;
+    border-radius: 6px 6px 0 0 !important;
+}
+.stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+    background: #f1f5f9 !important; 
+    color: #1e293b !important;
+}
+.stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) p {
+    color: #1e293b !important;
 }
 
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important;
-  background:var(--bg0)!important;color:var(--txt)!important;}
+/* ═══════ FORM CONTROLS ═══════ */
+.stTextArea textarea {
+    background: #f8fafc !important; border: 1.5px solid #e0f2fe !important;
+    border-radius: 10px !important; color: #0f172a !important;
+    font-family: 'Inter', sans-serif !important; font-size: .87rem !important;
+    line-height: 1.7 !important; resize: none !important;
+}
+.stTextArea textarea:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56,189,248,.15) !important;
+}
+.stTextArea textarea::placeholder { color: #94a3b8 !important; }
 
-.stApp{background:radial-gradient(ellipse 120% 80% at 60% -10%,
-  rgba(79,142,247,.12) 0%,transparent 55%),
-  linear-gradient(160deg,#07090f 0%,#0d1117 60%,#07090f 100%)!important;}
+.stTextInput input {
+    background: #f8fafc !important; border: 1.5px solid #e0f2fe !important;
+    border-radius: 10px !important; color: #0f172a !important; font-size: .87rem !important;
+    padding: 10px 14px !important;
+}
+.stTextInput input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56,189,248,.15) !important;
+}
+.stTextInput input::placeholder { color: #94a3b8 !important; }
 
-#MainMenu,footer,header{visibility:hidden}
-section[data-testid="stSidebar"]{
-  background:linear-gradient(180deg,#0d1117 0%,#07090f 100%)!important;
-  border-right:1px solid var(--border)!important;}
+/* ═══════ BUTTONS ═══════ */
+.stButton > button {
+    font-family: 'Inter', sans-serif !important; font-weight: 600 !important;
+    font-size: .84rem !important; border-radius: 10px !important;
+    transition: all .2s ease !important; height: 44px !important;
+}
+[data-testid="baseButton-primary"] {
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
+    border: none !important; color: #fff !important;
+    box-shadow: 0 2px 8px rgba(14,165,233,.25) !important;
+}
+[data-testid="baseButton-primary"]:hover {
+    background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(14,165,233,.3) !important;
+}
+[data-testid="baseButton-secondary"] {
+    background: #f0f9ff !important; border: 1.5px solid #e0f2fe !important; color: #0284c7 !important;
+}
+[data-testid="baseButton-secondary"]:hover {
+    background: #e0f2fe !important; border-color: #7dd3fc !important;
+}
 
-/* scrollbar */
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--purple);border-radius:99px}
+/* ═══════ FILE UPLOADER ═══════ */
+[data-testid="stFileUploader"] {
+    background: #f0f9ff !important; border: 2px dashed #bae6fd !important;
+    border-radius: 12px !important;
+}
+[data-testid="stFileUploader"]:hover { border-color: #38bdf8 !important; }
 
-/* ── Hero banner ── */
-.hero{
-  background:linear-gradient(135deg,#0f1729 0%,#141d33 60%,#0c1220 100%);
-  border:1px solid rgba(155,114,247,.25);
-  border-radius:22px;padding:32px 40px 28px;
-  margin-bottom:28px;position:relative;overflow:hidden;
-  box-shadow:var(--shadow),0 0 60px rgba(155,114,247,.1);}
-.hero::before{content:'';position:absolute;top:-40%;left:-20%;
-  width:140%;height:180%;
-  background:radial-gradient(ellipse,rgba(79,142,247,.06) 0%,transparent 60%);
-  pointer-events:none;}
-.hero-logo{font-size:2.6rem;font-weight:900;letter-spacing:-1px;
-  background:linear-gradient(90deg,#c4b5fd,#60a5fa,#34d399,#f472b6);
-  background-size:200%;animation:grad 6s linear infinite;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;margin:0 0 6px 0;}
-@keyframes grad{0%{background-position:0%}100%{background-position:200%}}
-.hero-sub{color:var(--muted);font-size:.95rem;margin:0;}
-.hero-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
-.badge{display:inline-flex;align-items:center;gap:5px;
-  padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:600;
-  text-transform:uppercase;letter-spacing:.6px;}
-.badge-live{background:rgba(34,211,165,.12);border:1px solid rgba(34,211,165,.3);color:#34d399;}
-.badge-demo{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);color:#fbbf24;}
-.badge-ocr{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);color:#38bdf8;}
-.badge-ai{background:rgba(155,114,247,.12);border:1px solid rgba(155,114,247,.3);color:#c4b5fd;}
+/* ═══════ SELECTBOX ═══════ */
+[data-testid="stSelectbox"] > div > div {
+    background: #f8fafc !important; border: 1.5px solid #e0f2fe !important;
+    color: #0f172a !important; border-radius: 10px !important;
+}
 
-/* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"]{
-  background:var(--bg2);border-radius:14px;padding:4px;gap:4px;
-  border:1px solid var(--border);}
-.stTabs [data-baseweb="tab"]{
-  border-radius:10px;font-weight:600;font-size:.85rem;
-  color:var(--muted);padding:10px 24px;border:none;
-  transition:all .2s ease;}
-.stTabs [aria-selected="true"]{
-  background:linear-gradient(135deg,var(--purple),var(--blue))!important;
-  color:#fff!important;box-shadow:0 4px 16px rgba(155,114,247,.35);}
+/* ═══════ RESULT CARD ═══════ */
+.result-card { border-radius: 14px; padding: 22px 26px; margin-top: 16px; animation: pop .4s ease; }
+@keyframes pop {
+    from { opacity:0; transform:translateY(12px) scale(.98); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.card-real { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 1.5px solid #a7f3d0; }
+.card-fake { background: linear-gradient(135deg, #fef2f2, #fff5f5); border: 1.5px solid #fecaca; }
+.result-verdict { font-size: 1.4rem; font-weight: 900; letter-spacing: .5px; margin-bottom: 6px; }
+.verdict-real { color: #059669; }
+.verdict-fake { color: #dc2626; }
+.result-desc { font-size: .82rem; color: #475569; line-height: 1.6; margin-bottom: 14px; }
+.conf-wrap { margin-bottom: 16px; }
+.conf-label { display:flex; justify-content:space-between; font-size:.7rem; color:#64748b;
+              margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.conf-track { background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.conf-fill  { height: 100%; border-radius: 99px; transition: width 1s cubic-bezier(.4,0,.2,1); }
+.fill-real  { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+.fill-fake  { background: linear-gradient(90deg, #ef4444, #fca5a5); }
+.prob-row   { display: flex; gap: 8px; }
+.prob-pill  { flex:1; background:#fff; border:1.5px solid #e2e8f0;
+              border-radius:10px; padding:9px 10px; text-align:center;
+              transition: transform .15s; }
+.prob-pill:hover { transform: translateY(-1px); }
+.prob-pill .pl { font-size:.58rem; color:#64748b; text-transform:uppercase;
+                 letter-spacing:.6px; font-weight:700; }
+.prob-pill .pv { font-size:.92rem; font-weight:800; margin-top:2px; }
+.pv-real{color:#059669}.pv-fake{color:#dc2626}.pv-mode{color:#0ea5e9;font-size:.72rem!important}
 
-/* ── Chat bubbles ── */
-.chat-wrap{max-height:520px;overflow-y:auto;padding:6px 2px 12px;
-  scroll-behavior:smooth;}
-.msg-row{display:flex;margin-bottom:20px;
-  animation:popIn .3s cubic-bezier(.34,1.56,.64,1);}
-@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(10px)}
-  to{opacity:1;transform:scale(1) translateY(0)}}
-.msg-row.user{justify-content:flex-end;}
-.msg-row.bot{justify-content:flex-start;}
-.bubble{max-width:78%;padding:14px 18px;border-radius:18px;
-  font-size:.88rem;line-height:1.65;word-break:break-word;}
-.bubble-user{background:linear-gradient(135deg,#4f8ef7,#7c5bf7);
-  color:#fff;border-bottom-right-radius:4px;
-  box-shadow:0 4px 18px rgba(79,142,247,.35);}
-.bubble-bot{background:var(--bg2);border:1px solid var(--border);
-  color:var(--txt);border-bottom-left-radius:4px;
-  box-shadow:0 4px 18px rgba(0,0,0,.3);}
-.av{width:38px;height:38px;border-radius:50%;display:flex;
-  align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
-.av-user{background:linear-gradient(135deg,#4f8ef7,#7c5bf7);margin-left:10px;order:2;}
-.av-bot{background:var(--bg3);border:1px solid var(--border);margin-right:10px;}
+/* ═══════ ANALYTICS PANEL ═══════ */
+.analytics-panel {
+    background: #f0f9ff; border: 1.5px solid #e0f2fe; border-radius: 14px;
+    padding: 20px 22px; margin-top: 16px;
+}
+.analytics-title {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #0284c7; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+}
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.metric-item {
+    background: #fff; border: 1px solid #e0f2fe; border-radius: 10px;
+    padding: 10px 14px; text-align: center; transition: all .15s;
+}
+.metric-item:hover { border-color: #7dd3fc; box-shadow: 0 2px 8px rgba(14,165,233,.08); }
+.mi-val { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+.mi-lbl { font-size: .58rem; font-weight: 600; text-transform: uppercase;
+          letter-spacing: .5px; color: #64748b; margin-top: 2px; }
 
-/* ── Verdict card ── */
-.vcard{border-radius:16px;padding:18px 22px;margin-top:10px;overflow:hidden;position:relative;}
-.vcard-real{background:linear-gradient(135deg,rgba(34,211,165,.13),rgba(4,120,87,.08));
-  border:1px solid rgba(34,211,165,.3);box-shadow:0 0 28px rgba(34,211,165,.15);}
-.vcard-fake{background:linear-gradient(135deg,rgba(240,90,110,.13),rgba(159,18,57,.08));
-  border:1px solid rgba(240,90,110,.3);box-shadow:0 0 28px rgba(240,90,110,.15);}
-.vtitle{font-size:1.7rem;font-weight:900;letter-spacing:1.5px;margin-bottom:4px;}
-.vcard-real .vtitle{color:#34d399}
-.vcard-fake .vtitle{color:#f87171}
-.vsub{font-size:.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+/* signal bars */
+.signal-row { display: flex; flex-direction: column; gap: 8px; }
+.signal-item { display: flex; align-items: center; gap: 10px; }
+.signal-label { font-size: .72rem; font-weight: 500; color: #475569; width: 120px; flex-shrink: 0; }
+.signal-bar-track { flex: 1; background: #e2e8f0; border-radius: 99px; height: 6px; overflow: hidden; }
+.signal-bar-fill { height: 100%; border-radius: 99px; transition: width .8s ease; }
+.sb-low  { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+.sb-mid  { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.sb-high { background: linear-gradient(90deg, #ef4444, #fca5a5); }
+.signal-val { font-size: .7rem; font-weight: 700; width: 36px; text-align: right; }
+.sv-low  { color: #059669; }
+.sv-mid  { color: #d97706; }
+.sv-high { color: #dc2626; }
 
-/* confidence bar */
-.cbar-bg{background:rgba(255,255,255,.07);border-radius:99px;
-  height:8px;margin:6px 0 4px;overflow:hidden;}
-.cbar-fill{height:100%;border-radius:99px;transition:width .9s ease;}
-.fill-real{background:linear-gradient(90deg,#059669,#34d399);}
-.fill-fake{background:linear-gradient(90deg,#dc2626,#f87171);}
+/* ═══════ CHAT BUBBLES ═══════ */
+.user-bub {
+    max-width: 75%; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #fff;
+    border-radius: 18px 18px 4px 18px; padding: 13px 18px;
+    font-size: .84rem; line-height: 1.6; box-shadow: 0 2px 8px rgba(14,165,233,.2);
+}
+.bot-bub {
+    max-width: 78%; border-radius: 18px 18px 18px 4px; padding: 16px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.bb-real { background: #ecfdf5; border: 1.5px solid #a7f3d0; }
+.bb-fake { background: #fef2f2; border: 1.5px solid #fecaca; }
 
-/* metric pills */
-.mpills{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
-.mpill{display:flex;flex-direction:column;align-items:center;
-  background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:10px;padding:8px 14px;min-width:76px;}
-.mpill .lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-.mpill .val{font-size:1rem;font-weight:700;margin-top:2px;}
-.v-real{color:#34d399}.v-fake{color:#f87171}.v-purple{color:#c4b5fd}
-
-/* ── Image result ── */
-.img-preview-box{border:2px dashed rgba(155,114,247,.35);border-radius:16px;
-  padding:12px;background:var(--bg2);margin-bottom:16px;text-align:center;}
-.ocr-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;
-  padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.8rem;
-  color:var(--muted);max-height:200px;overflow-y:auto;line-height:1.7;
-  white-space:pre-wrap;margin-bottom:14px;}
-.ocr-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;
-  color:var(--cyan);font-weight:600;margin-bottom:6px;}
-
-/* ── Inputs ── */
-.stTextArea textarea{
-  background:var(--bg2)!important;
-  border:1px solid rgba(155,114,247,.25)!important;
-  border-radius:12px!important;color:var(--txt)!important;
-  font-size:.88rem!important;resize:none!important;
-  transition:border-color .2s!important;}
-.stTextArea textarea:focus{border-color:var(--blue)!important;
-  box-shadow:0 0 0 3px rgba(79,142,247,.15)!important;}
-.stTextArea textarea::placeholder{color:#3d4f6e!important;}
-
-/* buttons */
-.stButton>button{font-family:'Inter',sans-serif!important;font-weight:600!important;
-  border-radius:10px!important;transition:all .2s ease!important;letter-spacing:.3px!important;}
-.stButton>button:hover{transform:translateY(-2px)!important;
-  box-shadow:0 8px 20px rgba(0,0,0,.3)!important;}
-
-/* sidebar card */
-.scard{background:rgba(255,255,255,.03);border:1px solid var(--border);
-  border-radius:12px;padding:14px 16px;margin-bottom:14px;}
-.scard h4{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;
-  color:var(--blue);margin:0 0 10px 0;}
-
-/* fancy hr */
-.fhr{border:none;height:1px;
-  background:linear-gradient(90deg,transparent,var(--purple),var(--blue),transparent);
-  margin:22px 0;}
-
-/* file uploader */
-[data-testid="stFileUploader"]{
-  background:var(--bg2)!important;border-radius:14px!important;
-  border:2px dashed rgba(155,114,247,.3)!important;padding:8px!important;}
-
-/* selectbox */
-[data-testid="stSelectbox"]>div>div{
-  background:var(--bg2)!important;border:1px solid var(--border)!important;
-  color:var(--txt)!important;border-radius:10px!important;}
-
-/* success / error boxes */
-[data-testid="stAlert"]{border-radius:10px!important;}
-
-/* spinner */
-.stSpinner>div{border-top-color:var(--purple)!important;}
+/* ═══════ MISC ═══════ */
+.section-label { font-size:.7rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.8px; color:#0284c7; margin-bottom:10px; }
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-icon  { font-size:2.5rem; margin-bottom:10px; opacity:.4; }
+.empty-text  { font-size:.88rem; color:#94a3b8; line-height:1.7; }
+.divider     { border:none; border-top:1.5px solid #e0f2fe; margin:20px 0; }
+.ocr-output  { background:#f0f9ff; border:1.5px solid #e0f2fe; border-radius:10px;
+  padding:14px 16px; font-size:.8rem; color:#475569; line-height:1.7;
+  max-height:180px; overflow-y:auto; white-space:pre-wrap; margin-bottom:14px; }
+.img-box { background:#f0f9ff; border:1.5px solid #e0f2fe; border-radius:12px; padding:14px; }
+.footer { margin-top:40px; padding-top:20px; border-top:1.5px solid #e0f2fe;
+  font-size:.72rem; color:#94a3b8; text-align:center; }
+.footer strong { color:#64748b; }
+.stSpinner > div { border-top-color: #0ea5e9 !important; }
+[data-testid="stAlert"] { border-radius:10px !important; font-size:.85rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Cached: load trained model (or stay in demo mode)
+# Load ML
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def load_artifacts():
-    mp = os.path.join("models","model.pkl")
-    vp = os.path.join("models","vectorizer.pkl")
+    mp, vp = os.path.join("models","model.pkl"), os.path.join("models","vectorizer.pkl")
     if os.path.exists(mp) and os.path.exists(vp):
         return joblib.load(mp), joblib.load(vp), True
     return None, None, False
 
-model, vectorizer, IS_LIVE = load_artifacts()
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Cached: EasyOCR reader (heavy — load once)
-# ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def load_ocr():
     try:
         import easyocr
-        reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-        return reader, True
+        return easyocr.Reader(['en'], gpu=False, verbose=False), True
     except Exception:
         return None, False
 
-ocr_reader, OCR_AVAILABLE = load_ocr()
+model, vectorizer, IS_LIVE = load_artifacts()
+ocr_reader, OCR_OK = load_ocr()
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Heuristic signals (demo mode)
+# Prediction Engine
 # ─────────────────────────────────────────────────────────────────────────────
-_FAKE = [
-    r'\bbreaking\b',r'\bshocking\b',r'\bmiracle\b',r'\bexplosive\b',
-    r'\bsecret\b',r'\bconspiracy\b',r'\bhoax\b',r'\bscam\b',r'\bexposed\b',
-    r'\bsatan\b',r'\billuminati\b',r'\bdeep state\b',r'\bfake\b',r'\blie\b',
-    r'\bcover.?up\b',r'\bplandemic\b',r'\b5g\b',r'\bwake up\b',
-    r'\bthey.?don.t.?want\b',r'\bshare before deleted\b',r'\btruth revealed\b',
-    r'\bmicrochip\b',r'\bbill gates\b.*\bvaccine\b',r'\bgovernment.?hiding\b',
-]
-_REAL = [
-    r'\baccording to\b',r'\bofficial\b',r'\bstatement\b',r'\bresearch\b',
-    r'\bstudy\b',r'\bscientist\b',r'\buniversity\b',r'\breport\b',
-    r'\bconference\b',r'\bdata\b',r'\bstatistic\b',r'\bjournalist\b',
-    r'\bnews agency\b',r'\bsource\b',r'\binvestigation\b',r'\bfact.?check\b',
-    r'\bpublished\b',r'\bverif\b',r'\bpress release\b',r'\bspokesperson\b',
-]
+_FK = [r'\bbreaking\b',r'\bshocking\b',r'\bmiracle cure\b',r'\bexposed\b',
+       r'\bconspiracy\b',r'\bhoax\b',r'\bdeep state\b',r'\billuminati\b',
+       r'\bwake up\b',r'\bshare before deleted\b',r'\bplandemic\b',r'\bmicrochip\b',
+       r'\b5g\b',r'\bcover.?up\b',r'\bgovernment.?hiding\b',r'\bthey don.t want\b',
+       r'\bsecret(ly)?\b',r'\bbanned\b',r'\bcure\b',r'\bmiracl\b']
+_RK = [r'\baccording to\b',r'\bofficial\b',r'\bpublished\b',r'\bresearch\b',
+       r'\bstudy\b',r'\bscientist\b',r'\buniversity\b',r'\breport\b',
+       r'\bpress release\b',r'\bspokesperson\b',r'\bfact.?check\b',r'\bverif\b',
+       r'\bpeer.?review\b',r'\bdata\b',r'\bevidence\b',r'\bjournal\b']
 
-def heuristic(text:str)->dict:
+def heuristic(text):
     t = text.lower()
-    fs = sum(bool(re.search(p,t)) for p in _FAKE)
-    rs = sum(bool(re.search(p,t)) for p in _REAL)
-    total = fs + rs + 1
-    pf = min(max((fs+0.5)/(total+1), 0.10), 0.90)
-    pr = round(1-pf, 4); pf = round(pf, 4)
-    lbl = "FAKE" if pf >= pr else "REAL"
-    return {"label":lbl,"confidence":max(pf,pr),"proba_real":pr,"proba_fake":pf}
+    fs = sum(bool(re.search(p,t)) for p in _FK)
+    rs = sum(bool(re.search(p,t)) for p in _RK)
+    pf = round(min(max((fs+.5)/(fs+rs+1.5),.1),.9),4); pr = round(1-pf,4)
+    return {"label":"FAKE" if pf>=pr else "REAL","confidence":max(pf,pr),"proba_real":pr,"proba_fake":pf}
 
-def ml_predict(text:str)->dict:
-    cleaned  = preprocess_text(text)
-    features = vectorizer.transform([cleaned])
-    pred     = model.predict(features)[0]
+def ml_predict(text):
+    cleaned = preprocess_text(text); features = vectorizer.transform([cleaned])
+    pred = model.predict(features)[0]
     if hasattr(model,"predict_proba"):
-        proba   = model.predict_proba(features)[0]
-        classes = list(model.classes_)
-        iR,iF  = 1,0
-        for i,c in enumerate(classes):
-            if str(c).upper() in ("1","REAL"): iR=i
-            elif str(c).upper() in ("0","FAKE"): iF=i
-        pf,pr = float(proba[iF]), float(proba[iR])
+        proba = model.predict_proba(features)[0]; classes = list(model.classes_)
+        iF = next((i for i,c in enumerate(classes) if str(c).upper() in ("0","FAKE")),0)
+        iR = next((i for i,c in enumerate(classes) if str(c).upper() in ("1","REAL")),1)
+        pf,pr = float(proba[iF]),float(proba[iR])
     else:
-        pf = 1.0 if str(pred).upper() in ("0","FAKE") else 0.0
-        pr = 1-pf
-    lbl = "FAKE" if str(pred).upper() in ("0","FAKE") else "REAL"
-    return {"label":lbl,"confidence":round(max(pf,pr),4),
-            "proba_real":round(pr,4),"proba_fake":round(pf,4)}
+        pf = 1.0 if str(pred).upper() in ("0","FAKE") else 0.0; pr = 1-pf
+    label = "FAKE" if str(pred).upper() in ("0","FAKE") else "REAL"
+    return {"label":label,"confidence":round(max(pf,pr),4),"proba_real":round(pr,4),"proba_fake":round(pf,4)}
 
-def run_prediction(text:str)->dict:
-    if IS_LIVE and model and vectorizer:
-        return ml_predict(text)
-    return heuristic(text)
+def predict(text):
+    return ml_predict(text) if (IS_LIVE and model and vectorizer) else heuristic(text)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OCR: extract text from PIL image
-# ─────────────────────────────────────────────────────────────────────────────
-def extract_text_from_image(pil_img: Image.Image) -> tuple[str, bool]:
-    """
-    Returns (extracted_text, success_flag).
-    Tries EasyOCR first; falls back to a basic message if unavailable.
-    """
-    if not OCR_AVAILABLE or ocr_reader is None:
-        return "", False
+def extract_ocr(pil_img):
+    if not OCR_OK: return "",False
     import numpy as np
-    img_array = np.array(pil_img.convert("RGB"))
-    results   = ocr_reader.readtext(img_array, detail=0, paragraph=True)
-    text      = " ".join(results).strip()
-    return text, bool(text)
+    return " ".join(ocr_reader.readtext(np.array(pil_img.convert("RGB")),detail=0,paragraph=True)).strip(), True
+
+def fetch_url_text(url):
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            html = r.read().decode("utf-8",errors="ignore")
+        text = re.sub(r'<(script|style)[^>]*>.*?</(script|style)>',' ',html,flags=re.S)
+        text = re.sub(r'<[^>]+>',' ',text); text = re.sub(r'&[a-z]+;',' ',text)
+        return re.sub(r'\s+',' ',text).strip()[:3000], True
+    except Exception as e: return str(e), False
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Build verdict HTML block
+# ██  REAL-TIME TEXT ANALYTICS ENGINE
 # ─────────────────────────────────────────────────────────────────────────────
-def verdict_html(result:dict, mode:str, source:str="text")->str:
-    lbl    = result["label"]
-    cp     = result["confidence"]*100
-    rp     = result["proba_real"]*100
-    fp     = result["proba_fake"]*100
-    real   = lbl=="REAL"
-    icon   = "✅" if real else "🚫"
-    cls    = "vcard-real" if real else "vcard-fake"
-    fcls   = "fill-real"  if real else "fill-fake"
-    vclr   = "#34d399"    if real else "#f87171"
+def analyze_text_signals(text: str) -> dict:
+    """
+    Compute real-time NLP signals from raw text.
+    Returns metrics for: word count, sentence count, avg word length,
+    caps ratio, exclamation density, question density,
+    clickbait score, emotional tone, readability, source quality.
+    """
+    words    = text.split()
+    wc       = len(words)
+    sc       = max(len(re.split(r'[.!?]+', text)), 1)
+    avg_wl   = round(sum(len(w) for w in words) / max(wc, 1), 1)
+    caps     = sum(1 for c in text if c.isupper())
+    caps_pct = round(caps / max(len(text), 1) * 100, 1)
+    excl     = text.count('!')
+    ques     = text.count('?')
+    excl_d   = round(excl / max(sc, 1) * 100, 1)
 
-    src_icon = "📸 Image" if source=="image" else "💬 Text"
-    detail = (
-        "Content shows <strong>credible, fact-based reporting</strong> consistent with verified news sources."
-        if real else
-        "Content exhibits <strong>characteristics of misinformation</strong> — exaggerated claims, emotive language, or unverified assertions."
-    )
+    # Clickbait score (0-100)
+    cb_signals = [
+        bool(re.search(r'BREAKING|SHOCKING|EXPOSED|URGENT|ALERT', text, re.I)),
+        bool(re.search(r'you won.t believe|they don.t want|secret(ly)?', text, re.I)),
+        bool(re.search(r'share (before|now|this)', text, re.I)),
+        caps_pct > 15,
+        excl > 3,
+        bool(re.search(r'!!+', text)),
+        bool(re.search(r'\?\?+', text)),
+        bool(re.search(r'miracle|cure|banned|conspiracy', text, re.I)),
+    ]
+    clickbait = min(round(sum(cb_signals) / len(cb_signals) * 100), 100)
 
-    tips = (
-        "<li>Cross-check with <strong>Reuters, AP, BBC</strong></li>"
-        "<li>Look for named sources and citations</li>"
-        "<li>Check the publication date</li>"
-        if real else
-        "<li>Verify with <strong>Snopes, FactCheck.org</strong></li>"
-        "<li>Search the headline in Google News</li>"
-        "<li>Check the original source website</li>"
-    )
+    # Emotional manipulation score (0-100)
+    emo_signals = [
+        bool(re.search(r'fear|terrif|danger|threat|horror|scary|alarming', text, re.I)),
+        bool(re.search(r'outrage|furious|angry|disgusting|unbelievable', text, re.I)),
+        bool(re.search(r'heartbreak|tragic|devastating|victim|suffer', text, re.I)),
+        bool(re.search(r'must (act|share|read|watch|see)', text, re.I)),
+        bool(re.search(r'wake up|open your eyes|truth they', text, re.I)),
+        excl > 2,
+        caps_pct > 12,
+    ]
+    emotional = min(round(sum(emo_signals) / len(emo_signals) * 100), 100)
 
+    # Source credibility (0-100, higher = better)
+    src_signals = [
+        bool(re.search(r'according to|stated|confirmed|reported', text, re.I)),
+        bool(re.search(r'official|government|ministry|department', text, re.I)),
+        bool(re.search(r'university|professor|dr\.|researcher|scientist', text, re.I)),
+        bool(re.search(r'study|research|published|journal|peer.?review', text, re.I)),
+        bool(re.search(r'reuters|ap |associated press|bbc|cnn', text, re.I)),
+        bool(re.search(r'spokesperson|press (release|conference)', text, re.I)),
+        bool(re.search(r'data|evidence|statistics|survey|poll', text, re.I)),
+    ]
+    source_q = min(round(sum(src_signals) / len(src_signals) * 100), 100)
+
+    # Readability (Flesch-like approximation, 0-100)
+    avg_syl = max(avg_wl * 0.6, 1)
+    avg_sl  = wc / max(sc, 1)
+    flesch  = max(0, min(100, round(206.835 - 1.015 * avg_sl - 84.6 * (avg_syl / max(avg_wl, 1)))))
+
+    # Writing quality composite
+    quality = max(0, min(100, round(
+        source_q * 0.35 +
+        flesch * 0.25 +
+        (100 - clickbait) * 0.2 +
+        (100 - emotional) * 0.2
+    )))
+
+    return {
+        "word_count": wc, "sentence_count": sc, "avg_word_len": avg_wl,
+        "caps_pct": caps_pct, "exclamation_count": excl, "question_count": ques,
+        "excl_density": excl_d,
+        "clickbait": clickbait, "emotional": emotional,
+        "source_quality": source_q, "readability": flesch,
+        "writing_quality": quality,
+    }
+
+
+def signal_bar(label: str, value: int, invert: bool = False) -> str:
+    """Render a signal bar. If invert=True, high=good (green). Default: high=bad (red)."""
+    if invert:
+        cls = "sb-low" if value >= 60 else ("sb-mid" if value >= 30 else "sb-high")
+        vcl = "sv-low" if value >= 60 else ("sv-mid" if value >= 30 else "sv-high")
+    else:
+        cls = "sb-high" if value >= 60 else ("sb-mid" if value >= 30 else "sb-low")
+        vcl = "sv-high" if value >= 60 else ("sv-mid" if value >= 30 else "sv-low")
+    return f"""<div class="signal-item">
+      <span class="signal-label">{label}</span>
+      <div class="signal-bar-track"><div class="signal-bar-fill {cls}" style="width:{value}%"></div></div>
+      <span class="signal-val {vcl}">{value}%</span>
+    </div>"""
+
+
+def analytics_panel(signals: dict) -> str:
+    """Render the full real-time analytics panel."""
     return f"""
-<div class="vcard {cls}">
-  <div class="vtitle">{icon} {lbl} NEWS</div>
-  <p class="vsub">{detail}</p>
-
-  <div style="font-size:.72rem;color:#64748b;margin-bottom:2px;">
-    CONFIDENCE SCORE &mdash;
-    <span style="color:{vclr};font-weight:700;">{cp:.1f}%</span>
+<div class="analytics-panel">
+  <div class="analytics-title">📊 Real-Time Text Analytics</div>
+  <div class="metric-grid">
+    <div class="metric-item"><div class="mi-val">{signals['word_count']}</div><div class="mi-lbl">Words</div></div>
+    <div class="metric-item"><div class="mi-val">{signals['sentence_count']}</div><div class="mi-lbl">Sentences</div></div>
+    <div class="metric-item"><div class="mi-val">{signals['avg_word_len']}</div><div class="mi-lbl">Avg Word Len</div></div>
+    <div class="metric-item"><div class="mi-val">{signals['caps_pct']}%</div><div class="mi-lbl">Caps Ratio</div></div>
+    <div class="metric-item"><div class="mi-val">{signals['exclamation_count']}</div><div class="mi-lbl">Exclamations</div></div>
+    <div class="metric-item"><div class="mi-val">{signals['question_count']}</div><div class="mi-lbl">Questions</div></div>
   </div>
-  <div class="cbar-bg">
-    <div class="cbar-fill {fcls}" style="width:{cp:.1f}%"></div>
-  </div>
-
-  <div class="mpills">
-    <div class="mpill"><span class="lbl">P(Real)</span>
-      <span class="val v-real">{rp:.1f}%</span></div>
-    <div class="mpill"><span class="lbl">P(Fake)</span>
-      <span class="val v-fake">{fp:.1f}%</span></div>
-    <div class="mpill"><span class="lbl">Engine</span>
-      <span class="val v-purple" style="font-size:.72rem;">{mode}</span></div>
-    <div class="mpill"><span class="lbl">Input</span>
-      <span class="val" style="font-size:.72rem;color:#38bdf8;">{src_icon}</span></div>
-  </div>
-
-  <div style="margin-top:14px;font-size:.78rem;color:#94a3b8;">
-    <strong style="color:{vclr};">💡 Next Steps:</strong>
-    <ul style="margin:4px 0 0 14px;line-height:1.9;">{tips}</ul>
+  <div class="analytics-title" style="margin-top:4px;">🔬 Credibility Signals</div>
+  <div class="signal-row">
+    {signal_bar("Clickbait", signals['clickbait'], invert=False)}
+    {signal_bar("Emotional", signals['emotional'], invert=False)}
+    {signal_bar("Source Quality", signals['source_quality'], invert=True)}
+    {signal_bar("Readability", signals['readability'], invert=True)}
+    {signal_bar("Writing Quality", signals['writing_quality'], invert=True)}
   </div>
 </div>"""
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Sample articles
-# ─────────────────────────────────────────────────────────────────────────────
-SAMPLES = {
-    "🔬 Real — Scientific Report":(
-        "Researchers at MIT's Computer Science and Artificial Intelligence Laboratory "
-        "have developed a new machine learning algorithm that significantly improves "
-        "natural language understanding. The study, published in Nature Machine Intelligence, "
-        "was peer-reviewed by 12 independent experts. According to the official press release, "
-        "the model achieved a 94.3% accuracy rate on standard benchmarks, verified across "
-        "five international institutions including Stanford and Cambridge."
-    ),
-    "🏛️ Real — Government Policy":(
-        "The Reserve Bank of India issued an official monetary policy statement on Thursday, "
-        "announcing a 25 basis point reduction in the repo rate to 6.25%. According to the "
-        "RBI Governor's press conference, this decision was unanimous among all six committee "
-        "members. The data released shows inflation stabilised at 4.1% for the third "
-        "consecutive quarter, well within the 2-6% tolerance band."
-    ),
-    "🚨 Fake — Conspiracy Theory":(
-        "SHOCKING!! Government secretly putting MICROCHIPS in COVID vaccines exposed!! "
-        "Deep state and Illuminati controlling world population through 5G towers!! "
-        "Bill Gates ADMITTED it in this video they deleted!! Wake up sheeple — share "
-        "before they take this down!! The truth they DON'T want you to see!! "
-        "Thousands already CHIPPED without knowing! BREAKING bombshell revelation!!"
-    ),
-    "💊 Fake — Health Hoax":(
-        "MIRACLE CURE doctors are hiding from you!! Drinking turmeric water cures cancer "
-        "in 3 days — BIG PHARMA suppressing this secret for 50 YEARS!! Hospitals will "
-        "lose billions if this goes viral! Share this explosive truth now before it gets "
-        "BANNED! One weird trick eliminated diabetes completely — FDA doesn't want you knowing!"
-    ),
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Session state init
+# Result card
 # ─────────────────────────────────────────────────────────────────────────────
-def _init(k,v):
-    if k not in st.session_state: st.session_state[k]=v
-
-_init("chat_history", [])
-_init("img_history",  [])
-_init("input_text",   "")
-_init("total",  0); _init("n_real", 0); _init("n_fake", 0)
-_init("img_total",0); _init("img_real",0); _init("img_fake",0)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ██  SIDEBAR
-# ─────────────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("""
-    <div style="text-align:center;padding:18px 0 10px;">
-      <div style="font-size:2.8rem;">🔍</div>
-      <div style="font-size:.9rem;font-weight:800;
-        background:linear-gradient(90deg,#c4b5fd,#60a5fa,#34d399);
-        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;letter-spacing:-.3px;">Fake News Detection</div>
-      <div style="font-size:.65rem;color:#374151;margin-top:3px;letter-spacing:.5px;">
-        USING MACHINE LEARNING
-      </div>
-    </div>
-    <hr style="border:none;border-top:1px solid rgba(255,255,255,.06);margin:6px 0 16px;">
-    """, unsafe_allow_html=True)
-
-    # mode badges
-    mode_tag = "AI Model" if IS_LIVE else "Demo"
-    if IS_LIVE:
-        st.markdown('<span class="badge badge-live">● AI Model Active</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="badge badge-demo">◉ Demo Mode</span>', unsafe_allow_html=True)
-        st.markdown("""
-        <div style="font-size:.72rem;color:#64748b;margin:8px 0 0;padding:10px;
-          background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.18);
-          border-radius:8px;line-height:1.6;">
-          ⚠️ <strong style="color:#fbbf24;">No trained model.</strong><br>
-          Upload your dataset then run<br>
-          <code style="color:#a78bfa;">python train.py</code>
-        </div>""", unsafe_allow_html=True)
-
-    if OCR_AVAILABLE:
-        st.markdown('<br><span class="badge badge-ocr">📸 OCR Ready</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<br><span class="badge" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;">📸 OCR Unavailable</span>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Stats ──
-    st.markdown('<div class="scard"><h4>📊 Session Stats</h4>', unsafe_allow_html=True)
-    c1,c2,c3 = st.columns(3)
-    c1.metric("Total", st.session_state.total + st.session_state.img_total)
-    c2.metric("✅ Real", st.session_state.n_real + st.session_state.img_real)
-    c3.metric("🚫 Fake", st.session_state.n_fake + st.session_state.img_fake)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="scard"><h4>💬 Text Checks</h4>', unsafe_allow_html=True)
-    a1,a2,a3 = st.columns(3)
-    a1.metric("Total", st.session_state.total)
-    a2.metric("Real",  st.session_state.n_real)
-    a3.metric("Fake",  st.session_state.n_fake)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="scard"><h4>📸 Image Checks</h4>', unsafe_allow_html=True)
-    b1,b2,b3 = st.columns(3)
-    b1.metric("Total", st.session_state.img_total)
-    b2.metric("Real",  st.session_state.img_real)
-    b3.metric("Fake",  st.session_state.img_fake)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Sample loader ──
-    st.markdown('<div class="scard"><h4>📰 Sample Articles</h4>', unsafe_allow_html=True)
-    pick = st.selectbox("Choose sample", ["— select —"]+list(SAMPLES.keys()),
-                        label_visibility="collapsed")
-    if pick != "— select —":
-        if st.button("📋 Load Sample", use_container_width=True):
-            st.session_state.input_text = SAMPLES[pick]
-            st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Clear ──
-    col_cc, col_ci = st.columns(2)
-    with col_cc:
-        if st.button("🗑️ Chat", use_container_width=True):
-            st.session_state.chat_history=[]
-            st.session_state.total=st.session_state.n_real=st.session_state.n_fake=0
-            st.session_state.input_text=""
-            st.rerun()
-    with col_ci:
-        if st.button("🗑️ Images", use_container_width=True):
-            st.session_state.img_history=[]
-            st.session_state.img_total=st.session_state.img_real=st.session_state.img_fake=0
-            st.rerun()
-
-    with st.expander("ℹ️ How It Works"):
-        st.markdown("""
-**Text Tab**
-1. Type / paste any news article
-2. Click **Analyze** → instant verdict
-
-**Image Tab**
-1. Upload a photo (newspaper, screenshot, WhatsApp forward, etc.)
-2. OCR extracts all text automatically
-3. AI analyzes extracted text → verdict
-
-**Confidence Score**
-- 90–100% → Very High certainty
-- 70–89%  → High certainty
-- 50–69%  → Moderate — verify manually
-        """)
-
-    st.markdown("""
-    <div style="text-align:center;margin-top:20px;font-size:.65rem;color:#1f2937;">
-    🔍 Fake News Detection using ML © 2025 &nbsp;|&nbsp; Built with Python & Streamlit
-    </div>""", unsafe_allow_html=True)
+def result_card(res, source="text"):
+    l=res["label"]; c=res["confidence"]*100; rp=res["proba_real"]*100; fp=res["proba_fake"]*100
+    r=l=="REAL"; cc="card-real" if r else "card-fake"; vc="verdict-real" if r else "verdict-fake"
+    fc="fill-real" if r else "fill-fake"; ic="✅" if r else "🚫"
+    d = "Content consistent with credible, verified reporting." if r else "Content shows misinformation signals."
+    sl={"text":"💬 Text","image":"📸 Image","url":"🔗 URL"}.get(source,source)
+    en="ML Model" if IS_LIVE else "Heuristic"
+    return f"""<div class="result-card {cc}">
+  <div class="result-verdict {vc}">{ic} {l} NEWS</div>
+  <p class="result-desc">{d}</p>
+  <div class="conf-wrap"><div class="conf-label"><span>Confidence Score</span>
+    <span style="color:{'#059669' if r else '#dc2626'};font-weight:700;">{c:.1f}%</span></div>
+    <div class="conf-track"><div class="conf-fill {fc}" style="width:{c:.1f}%"></div></div></div>
+  <div class="prob-row">
+    <div class="prob-pill"><div class="pl">P(Real)</div><div class="pv pv-real">{rp:.1f}%</div></div>
+    <div class="prob-pill"><div class="pl">P(Fake)</div><div class="pv pv-fake">{fp:.1f}%</div></div>
+    <div class="prob-pill"><div class="pl">Source</div><div class="pv pv-mode">{sl}</div></div>
+    <div class="prob-pill"><div class="pl">Engine</div><div class="pv pv-mode">{en}</div></div>
+  </div></div>"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ██  MAIN CONTENT
+# Session state
 # ─────────────────────────────────────────────────────────────────────────────
+for k,v in [("history",[]),("total",0),("n_real",0),("n_fake",0),("input","")]:
+    if k not in st.session_state: st.session_state[k] = v
 
-# Hero banner
-mode_badge = (
-    '<span class="badge badge-live" style="margin-left:12px;">● AI Model</span>'
-    if IS_LIVE else
-    '<span class="badge badge-demo" style="margin-left:12px;">◉ Demo</span>'
-)
-ocr_badge = (
-    '<span class="badge badge-ocr">📸 OCR Active</span>'
-    if OCR_AVAILABLE else
-    '<span class="badge" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;">📸 OCR Offline</span>'
-)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ██  HEADER
+# ─────────────────────────────────────────────────────────────────────────────
+engine_badge = '<span class="h-badge hb-live">● Model Active</span>' if IS_LIVE else '<span class="h-badge hb-demo">◉ Demo Mode</span>'
 st.markdown(f"""
-<div class="hero">
-  <div class="hero-logo">🔍 Fake News Detection using Machine Learning</div>
-  <p class="hero-sub">
-    Analyze text or upload an image to detect misinformation instantly using AI &amp; NLP.
-  </p>
-  <div class="hero-badges">
-    {mode_badge}
-    {ocr_badge}
-    <span class="badge badge-ai">🤖 NLP Powered</span>
-    <span class="badge" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:#fca5a5;">
-      🛡️ Anti-Misinformation
-    </span>
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">🛡️</div>
+    <div>
+      <div class="header-title">Fake News Detection using Machine Learning</div>
+      <div class="header-sub">NLP · ML Classifier · OCR · Real-Time Analytics</div>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="h-badge hb-ml">🧠 ML Powered</span>
+    {engine_badge}
   </div>
 </div>
 """, unsafe_allow_html=True)
 
+# KPIs
+st.markdown(f"""<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val">{st.session_state.total}</div><div class="kpi-lbl">Articles Analyzed</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:#059669">{st.session_state.n_real}</div><div class="kpi-lbl">Real</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:#dc2626">{st.session_state.n_fake}</div><div class="kpi-lbl">Fake</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:#0ea5e9">{'ML' if IS_LIVE else 'Demo'}</div><div class="kpi-lbl">Engine</div></div>
+</div>""", unsafe_allow_html=True)
 
-# ── Tabs ──
-tab_text, tab_image = st.tabs(["💬  Text / Chat Analysis", "📸  Image Analysis (OCR)"])
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# TAB 1 — TEXT CHAT
-# ═══════════════════════════════════════════════════════════════════════════
-with tab_text:
-
-    # ── Render chat history ──
-    chat_slot = st.empty()
-
-    def render_chat():
-        if not st.session_state.chat_history:
-            chat_slot.markdown("""
-            <div style="text-align:center;padding:52px 20px;color:#1f2937;">
-              <div style="font-size:3rem;margin-bottom:10px;">💬</div>
-              <div style="font-size:.95rem;font-weight:500;color:#4b5563;">
-                Paste a news article below and click <strong>Analyze</strong>.
-              </div>
-              <div style="font-size:.8rem;color:#374151;margin-top:6px;">
-                Or load a sample from the sidebar →
-              </div>
-            </div>""", unsafe_allow_html=True)
-            return
-        parts = ['<div class="chat-wrap">']
-        for m in st.session_state.chat_history:
-            if m["role"]=="user":
-                disp = m["content"][:600]+"…" if len(m["content"])>600 else m["content"]
-                disp = disp.replace("<","&lt;").replace(">","&gt;")
-                parts.append(f"""
-                <div class="msg-row user">
-                  <div class="bubble bubble-user">{disp}</div>
-                  <div class="av av-user">👤</div>
-                </div>""")
-            else:
-                inner = m.get("html","") or m["content"]
-                parts.append(f"""
-                <div class="msg-row bot">
-                  <div class="av av-bot">🔍</div>
-                  <div class="bubble bubble-bot">{inner}</div>
-                </div>""")
-        parts.append("</div>")
-        chat_slot.markdown("".join(parts), unsafe_allow_html=True)
-
-    render_chat()
-    st.markdown('<hr class="fhr">', unsafe_allow_html=True)
-
-    # ── Input ──
-    st.markdown('<div style="font-size:.75rem;color:#475569;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600;">📝 Enter News Article Text</div>', unsafe_allow_html=True)
-
-    user_text = st.text_area(
-        "news_text",
-        value=st.session_state.input_text,
-        placeholder=(
-            "Paste or type a news article here…\n\n"
-            "Example: 'According to the WHO report published today, scientists at…'"
-        ),
-        height=170,
-        label_visibility="collapsed",
-    )
-
-    col_btn, col_clr, col_info = st.columns([2.5, 1, 2])
-    with col_btn:
-        clicked = st.button("🔍  Analyze Article", type="primary", use_container_width=True)
-    with col_clr:
-        if st.button("✕ Clear", use_container_width=True):
-            st.session_state.input_text = ""
-            st.rerun()
-    with col_info:
-        n = len(user_text)
-        clr = "#22d3a5" if n>=50 else "#f5a623" if n>0 else "#374151"
-        st.markdown(
-            f'<div style="padding:9px 0;font-size:.78rem;color:{clr};text-align:right;">'
-            f'{"✓" if n>=50 else "⚠"} {n} chars{"" if n>=50 else " — min 50 recommended"}</div>',
-            unsafe_allow_html=True)
-
-    if clicked:
-        txt = user_text.strip()
-        if not txt:
-            st.warning("⚠️ Please enter some text first.")
-        elif len(txt) < 15:
-            st.warning("⚠️ Too short — please enter at least a sentence.")
-        else:
-            st.session_state.chat_history.append({"role":"user","content":txt})
-            with st.spinner("🔍 Analyzing article…"):
-                time.sleep(0.5)
-                result = run_prediction(txt)
-            html = verdict_html(result, mode_tag, "text")
-            st.session_state.chat_history.append({"role":"bot","content":"","html":html})
-            st.session_state.total += 1
-            if result["label"]=="REAL": st.session_state.n_real += 1
-            else: st.session_state.n_fake += 1
-            st.session_state.input_text = ""
-            st.rerun()
+# ─────────────────────────────────────────────────────────────────────────────
+# ██  TABS
+# ─────────────────────────────────────────────────────────────────────────────
+tab1, tab2, tab3 = st.tabs(["💬  Text Analytics","📸  Image OCR","🔗  URL Analysis"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# TAB 2 — IMAGE OCR ANALYSIS
+# TAB 1 — TEXT CHATBOT + REAL-TIME ANALYTICS
 # ═══════════════════════════════════════════════════════════════════════════
-with tab_image:
-
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(155,114,247,.06));
-      border:1px solid rgba(56,189,248,.2);border-radius:14px;
-      padding:16px 20px;margin-bottom:20px;">
-      <div style="font-size:.95rem;font-weight:600;color:#38bdf8;margin-bottom:4px;">
-        📸 Image-Based Fake News Detection
-      </div>
-      <div style="font-size:.82rem;color:#64748b;line-height:1.6;">
-        Upload a <strong style="color:#a5b4fc;">newspaper clipping</strong>,
-        <strong style="color:#a5b4fc;">screenshot</strong>,
-        <strong style="color:#a5b4fc;">WhatsApp forward</strong>, or any news image.
-        Fake News Detection using Machine Learning will extract the text using OCR and instantly check for misinformation.
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not OCR_AVAILABLE:
-        st.error("""
-        **📸 OCR engine not available.**
-        Run the following to enable image analysis:
-        ```
-        pip install easyocr
-        ```
-        Then restart the app.
-        """)
+with tab1:
+    te = [h for h in st.session_state.history if h["source"]=="text"]
+    if not te:
+        st.markdown("""<div class="empty-state"><div class="empty-icon">💬</div>
+          <div class="empty-text">Paste or type a news article below and click <strong>Analyze</strong><br>
+          to get instant ML classification + real-time text analytics.</div></div>""", unsafe_allow_html=True)
     else:
-        uploaded = st.file_uploader(
-            "Drop your image here or click to browse",
-            type=["jpg","jpeg","png","bmp","tiff","webp"],
-            label_visibility="visible",
-            help="Supports: JPG, PNG, BMP, TIFF, WEBP — max 10 MB",
-        )
+        bbs = []
+        for h in te:
+            l=h["result"]["label"]; c=h["result"]["confidence"]*100; r=l=="REAL"
+            vc="#059669" if r else "#dc2626"; bc="bb-real" if r else "bb-fake"
+            fl="fill-real" if r else "fill-fake"; ic="✅" if r else "🚫"
+            d=h["text"][:320]+("…" if len(h["text"])>320 else "")
+            rp=h["result"]["proba_real"]*100; fp=h["result"]["proba_fake"]*100
+            bbs.append(f"""<div style="margin-bottom:20px;">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                <div class="user-bub">{d}</div>
+                <div style="width:36px;height:36px;border-radius:50%;
+                  background:linear-gradient(135deg,#0ea5e9,#38bdf8);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:.95rem;margin-left:10px;flex-shrink:0;color:#fff;">👤</div></div>
+              <div style="display:flex;justify-content:flex-start;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#f0f9ff;
+                  border:1.5px solid #e0f2fe;display:flex;align-items:center;justify-content:center;
+                  font-size:.95rem;margin-right:10px;flex-shrink:0;">🛡️</div>
+                <div class="bot-bub {bc}">
+                  <div style="font-size:1.1rem;font-weight:900;color:{vc};margin-bottom:6px;">{ic} {l} NEWS</div>
+                  <div style="font-size:.65rem;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:5px;">Confidence</div>
+                  <div style="background:#e2e8f0;border-radius:99px;height:7px;overflow:hidden;margin-bottom:12px;">
+                    <div class="conf-fill {fl}" style="width:{c:.1f}%;height:100%;border-radius:99px;"></div></div>
+                  <div style="display:flex;gap:8px;">
+                    <div style="flex:1;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;text-align:center;">
+                      <div style="font-size:.55rem;color:#64748b;text-transform:uppercase;font-weight:700;">P(Real)</div>
+                      <div style="font-size:.88rem;font-weight:800;color:#059669;">{rp:.1f}%</div></div>
+                    <div style="flex:1;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;text-align:center;">
+                      <div style="font-size:.55rem;color:#64748b;text-transform:uppercase;font-weight:700;">P(Fake)</div>
+                      <div style="font-size:.88rem;font-weight:800;color:#dc2626;">{fp:.1f}%</div></div>
+                    <div style="flex:1;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;text-align:center;">
+                      <div style="font-size:.55rem;color:#64748b;text-transform:uppercase;font-weight:700;">Score</div>
+                      <div style="font-size:.88rem;font-weight:800;color:{vc};">{c:.0f}%</div></div>
+                  </div></div></div></div>""")
+        st.markdown('<div style="max-height:460px;overflow-y:auto;padding:4px 2px;">'+"".join(bbs)+"</div>", unsafe_allow_html=True)
 
-        if uploaded:
-            img = Image.open(uploaded)
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-            col_img, col_result = st.columns([1, 1.2], gap="large")
+    SAMPLES = {"— Load a sample article —":"",
+        "✅ Real — MIT Study":"Researchers at MIT published a new study in Nature journal showing a breakthrough in quantum error correction. The findings were independently verified by Stanford and Cambridge. According to the official press release, the team achieved 94% accuracy on standard benchmarks.",
+        "✅ Real — RBI Policy":"The Reserve Bank of India issued an official statement confirming a 25 basis point rate cut. The Governor's press conference presented data showing inflation at 4.1% for the third consecutive quarter. Multiple agencies including Reuters and AP confirmed the report.",
+        "🚫 Fake — Conspiracy":"SHOCKING: Government secretly putting microchips in vaccines EXPOSED!! Deep state hiding the truth from billions — wake up sheeple!! Share before they delete this! The illuminati are behind everything!!",
+        "🚫 Fake — Health":"Doctors don't want you to know: turmeric water CURES cancer in 3 days! Big Pharma has been hiding this for 50 years! Share this miracle cure now before it gets banned!!"}
+    pk = st.selectbox("sample", list(SAMPLES.keys()), label_visibility="collapsed")
+    if pk != "— Load a sample article —" and SAMPLES[pk]: st.session_state.input = SAMPLES[pk]; st.rerun()
 
-            with col_img:
-                st.markdown('<div class="img-preview-box">', unsafe_allow_html=True)
-                st.image(img, caption=f"📎 {uploaded.name}", use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+    text_input = st.text_area("text_in", value=st.session_state.input,
+        placeholder="Paste or type a news article here for ML classification + real-time analytics…",
+        height=140, label_visibility="collapsed")
 
-                # image metadata
-                w, h = img.size
-                st.markdown(f"""
-                <div style="font-size:.75rem;color:#475569;text-align:center;
-                  background:var(--bg2);border:1px solid var(--border);
-                  border-radius:8px;padding:8px;margin-top:-8px;">
-                  📐 {w}×{h}px &nbsp;|&nbsp;
-                  📁 {uploaded.type} &nbsp;|&nbsp;
-                  💾 {uploaded.size/1024:.1f} KB
-                </div>""", unsafe_allow_html=True)
+    c1,c2 = st.columns([3,1])
+    with c1: go = st.button("🔎  Analyze Article", type="primary", use_container_width=True)
+    with c2:
+        if st.button("Clear", type="secondary", use_container_width=True):
+            st.session_state.history=[h for h in st.session_state.history if h["source"]!="text"]
+            st.session_state.input=""; st.rerun()
 
-            with col_result:
-                analyze_img = st.button(
-                    "🔍  Analyze Image",
-                    type="primary",
-                    use_container_width=True,
-                    key="analyze_img_btn",
-                )
-
-                if analyze_img:
-                    with st.spinner("📸 Extracting text via OCR…"):
-                        extracted, ok = extract_text_from_image(img)
-
-                    if not ok or len(extracted.strip()) < 15:
-                        st.error("""
-                        ❌ **Could not extract readable text from this image.**
-
-                        **Tips for better results:**
-                        - Use a clear, high-resolution image
-                        - Ensure text is not rotated or blurry
-                        - Screenshots work best; avoid artistic fonts
-                        """)
-                    else:
-                        with st.spinner("🧠 Analyzing extracted text…"):
-                            time.sleep(0.4)
-                            result = run_prediction(extracted)
-
-                        # Show extracted text
-                        st.markdown('<div class="ocr-label">📄 Extracted Text (OCR)</div>', unsafe_allow_html=True)
-                        st.markdown(
-                            f'<div class="ocr-box">{extracted[:1200]}{"…" if len(extracted)>1200 else ""}</div>',
-                            unsafe_allow_html=True)
-
-                        # Show verdict
-                        st.markdown(
-                            verdict_html(result, mode_tag, "image"),
-                            unsafe_allow_html=True)
-
-                        # Save to image history
-                        import numpy as np
-                        thumb_buf = io.BytesIO()
-                        img.thumbnail((200, 200))
-                        img.save(thumb_buf, format="PNG")
-
-                        st.session_state.img_history.append({
-                            "name"      : uploaded.name,
-                            "extracted" : extracted,
-                            "result"    : result,
-                        })
-                        st.session_state.img_total += 1
-                        if result["label"]=="REAL": st.session_state.img_real += 1
-                        else: st.session_state.img_fake += 1
-
-                elif not analyze_img:
-                    st.markdown("""
-                    <div style="text-align:center;padding:32px 16px;color:#374151;">
-                      <div style="font-size:2rem;margin-bottom:8px;">👆</div>
-                      <div style="font-size:.85rem;color:#4b5563;">
-                        Click <strong>Analyze Image</strong> to begin OCR extraction and detection.
-                      </div>
-                    </div>""", unsafe_allow_html=True)
-
+    if go:
+        txt = text_input.strip()
+        if len(txt)<20: st.warning("Enter at least one full sentence.")
         else:
-            # Placeholder when no image uploaded
-            st.markdown("""
-            <div style="text-align:center;padding:60px 20px;
-              border:2px dashed rgba(155,114,247,.2);border-radius:18px;
-              background:rgba(255,255,255,.01);margin-top:8px;">
-              <div style="font-size:3.5rem;margin-bottom:12px;">📸</div>
-              <div style="font-size:1rem;font-weight:600;color:#6b7a99;margin-bottom:6px;">
-                Upload a News Image
-              </div>
-              <div style="font-size:.82rem;color:#374151;line-height:1.7;">
-                Newspaper clipping &nbsp;·&nbsp; Screenshot &nbsp;·&nbsp; Social media post<br>
-                WhatsApp forward &nbsp;·&nbsp; Web article snapshot
-              </div>
-            </div>""", unsafe_allow_html=True)
+            with st.spinner("Running ML classification + analytics…"):
+                time.sleep(0.3)
+                res = predict(txt)
+                signals = analyze_text_signals(txt)
 
-        # ── Image History ──
-        if st.session_state.img_history:
-            st.markdown('<hr class="fhr">', unsafe_allow_html=True)
-            st.markdown("#### 🕓 Image Analysis History")
-            for i, h in enumerate(reversed(st.session_state.img_history)):
-                lbl   = h["result"]["label"]
-                conf  = h["result"]["confidence"]*100
-                icon  = "✅" if lbl=="REAL" else "🚫"
-                color = "#22d3a5" if lbl=="REAL" else "#f87171"
-                with st.expander(f"{icon} {h['name']} — {lbl} ({conf:.0f}% confidence)"):
-                    st.markdown(
-                        f'<div style="font-size:.78rem;color:{color};font-weight:700;">'
-                        f'{lbl} NEWS — {conf:.1f}% confidence</div>',
-                        unsafe_allow_html=True)
-                    st.text_area(
-                        "Extracted Text",
-                        h["extracted"][:800],
-                        height=120,
-                        disabled=True,
-                        key=f"hist_{i}")
+            # Store with signals
+            st.session_state.history.append({"text":txt,"result":res,"source":"text","signals":signals})
+            st.session_state.total+=1
+            if res["label"]=="REAL": st.session_state.n_real+=1
+            else: st.session_state.n_fake+=1
+            st.session_state.input=""
+            st.rerun()
+
+    # Show analytics for last analyzed article
+    if te and "signals" in te[-1]:
+        st.markdown(analytics_panel(te[-1]["signals"]), unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TAB 2 — IMAGE OCR
+# ═══════════════════════════════════════════════════════════════════════════
+with tab2:
+    if not OCR_OK: st.error("OCR not available. Run: `pip install easyocr`")
+    else:
+        cu,cr = st.columns([1,1.2], gap="large")
+        with cu:
+            st.markdown('<div class="section-label">Upload Image</div>', unsafe_allow_html=True)
+            up = st.file_uploader("img", type=["jpg","jpeg","png","webp","bmp"], label_visibility="collapsed")
+            if up:
+                img=Image.open(up)
+                st.markdown('<div class="img-box">', unsafe_allow_html=True)
+                st.image(img, caption=up.name, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+        with cr:
+            st.markdown('<div class="section-label">Detection Result</div>', unsafe_allow_html=True)
+            if up:
+                if st.button("🔎  Analyze Image", type="primary", use_container_width=True):
+                    with st.spinner("Extracting text via OCR…"): ex,ok=extract_ocr(img)
+                    if not ok or len(ex.strip())<20: st.error("No readable text found.")
+                    else:
+                        with st.spinner("Classifying…"): res=predict(ex); sig=analyze_text_signals(ex)
+                        st.markdown(f'<div class="ocr-output">{ex[:800]}</div>', unsafe_allow_html=True)
+                        st.markdown(result_card(res,"image"), unsafe_allow_html=True)
+                        st.markdown(analytics_panel(sig), unsafe_allow_html=True)
+                        st.session_state.history.insert(0,{"text":ex,"result":res,"source":"image","signals":sig})
+                        st.session_state.total+=1
+                        if res["label"]=="REAL": st.session_state.n_real+=1
+                        else: st.session_state.n_fake+=1
+                        st.rerun()
+            else:
+                st.markdown("""<div class="empty-state" style="border:2px dashed #bae6fd;border-radius:12px;">
+                  <div class="empty-icon">📸</div><div class="empty-text">Upload a newspaper clipping,<br>screenshot, or social media post</div></div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TAB 3 — URL ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════
+with tab3:
+    st.markdown('<div class="section-label">News Article URL</div>', unsafe_allow_html=True)
+    uc,bc = st.columns([4,1])
+    with uc: url_in = st.text_input("url", placeholder="https://example.com/news-article", label_visibility="collapsed")
+    with bc: url_go = st.button("🔎  Fetch & Analyze", type="primary", use_container_width=True)
+    if url_go:
+        u=url_in.strip()
+        if not u.startswith("http"): st.warning("Enter a valid URL.")
+        else:
+            with st.spinner("Fetching article…"): text,ok=fetch_url_text(u)
+            if not ok or len(text.strip())<50: st.error(f"Failed: {text}")
+            else:
+                with st.spinner("Classifying…"): res=predict(text); sig=analyze_text_signals(text)
+                ct,cr2 = st.columns([1,1], gap="large")
+                with ct:
+                    st.markdown('<div class="section-label">Extracted Content</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="ocr-output">{text[:700]}…</div>', unsafe_allow_html=True)
+                with cr2:
+                    st.markdown('<div class="section-label">Detection Result</div>', unsafe_allow_html=True)
+                    st.markdown(result_card(res,"url"), unsafe_allow_html=True)
+                st.markdown(analytics_panel(sig), unsafe_allow_html=True)
+                st.session_state.history.insert(0,{"text":text,"result":res,"source":"url","signals":sig})
+                st.session_state.total+=1
+                if res["label"]=="REAL": st.session_state.n_real+=1
+                else: st.session_state.n_fake+=1
+                st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Footer
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<hr style="border:none;border-top:1px solid rgba(255,255,255,.05);margin:28px 0 14px;">
-<div style="text-align:center;font-size:.72rem;color:#1f2937;">
-  🔍 <strong style="color:#4b5563;">Fake News Detection using Machine Learning</strong> &nbsp;—&nbsp;
-  Powered by NLP &amp; Scikit-learn &nbsp;|&nbsp;
-  Built with Python &amp; Streamlit &nbsp;|&nbsp;
-  © 2025 Govardhan N
+st.markdown("""<div class="footer">
+  <strong>Fake News Detection using Machine Learning</strong> &nbsp;·&nbsp;
+  Python &nbsp;·&nbsp; Scikit-learn &nbsp;·&nbsp; NLTK &nbsp;·&nbsp; Streamlit
 </div>""", unsafe_allow_html=True)
