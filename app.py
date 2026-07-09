@@ -101,10 +101,11 @@ button[data-baseweb="tab-list"] {
     padding-bottom: 0px !important;
     gap: 8px !important;
 }
+/* Base Inactive Tabs */
 button[data-baseweb="tab"] {
     font-size: .85rem !important;
-    font-weight: 600 !important; 
-    color: #475569 !important;
+    font-weight: 800 !important; 
+    color: #000000 !important; /* Highlighted in pure black */
     background: transparent !important; 
     border: none !important;
     border-radius: 6px 6px 0 0 !important;
@@ -113,7 +114,7 @@ button[data-baseweb="tab"] {
 }
 /* Force text color on inner elements */
 button[data-baseweb="tab"] p, button[data-baseweb="tab"] span {
-    color: #475569 !important;
+    color: #000000 !important;
 }
 button[data-baseweb="tab"][aria-selected="true"], button[data-baseweb="tab"][aria-selected="true"] p {
     background: #0066cc !important; 
