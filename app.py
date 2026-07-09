@@ -101,33 +101,32 @@ button[data-baseweb="tab-list"] {
     padding-bottom: 0px !important;
     gap: 8px !important;
 }
-/* Base Inactive Tabs */
 button[data-baseweb="tab"] {
     font-size: .85rem !important;
     font-weight: 800 !important; 
-    color: #000000 !important; /* Highlighted in pure black */
+    color: #000000 !important;
     background: transparent !important; 
     border: none !important;
     border-radius: 6px 6px 0 0 !important;
     padding: 10px 24px !important; 
     transition: all .2s ease !important;
 }
-/* Force text color on inner elements */
-button[data-baseweb="tab"] p, button[data-baseweb="tab"] span {
+/* Force text color on inner elements aggressively */
+button[data-baseweb="tab"] * {
     color: #000000 !important;
+    font-weight: 800 !important;
 }
-button[data-baseweb="tab"][aria-selected="true"], button[data-baseweb="tab"][aria-selected="true"] p {
+button[data-baseweb="tab"][aria-selected="true"], button[data-baseweb="tab"][aria-selected="true"] * {
     background: #0066cc !important; 
     color: #ffffff !important; 
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     border-radius: 6px 6px 0 0 !important;
 }
 button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background: #f1f5f9 !important; 
-    color: #1e293b !important;
 }
-button[data-baseweb="tab"]:hover:not([aria-selected="true"]) p {
-    color: #1e293b !important;
+button[data-baseweb="tab"]:hover:not([aria-selected="true"]) * {
+    color: #000000 !important;
 }
 
 /* ═══════ FORM CONTROLS ═══════ */
