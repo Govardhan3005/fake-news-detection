@@ -94,14 +94,14 @@ html, body, [class*="css"] {
            letter-spacing: 1px; color: #64748b; margin-top: 3px; }
 
 /* ═══════ TABS ═══════ */
-button[data-baseweb="tab-list"] {
+.stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
     border-bottom: 1px solid #e2e8f0 !important;
     margin-bottom: 22px !important;
     padding-bottom: 0px !important;
     gap: 8px !important;
 }
-button[data-baseweb="tab"] {
+.stTabs [data-baseweb="tab"] {
     font-size: .85rem !important;
     font-weight: 800 !important; 
     color: #000000 !important;
@@ -112,20 +112,21 @@ button[data-baseweb="tab"] {
     transition: all .2s ease !important;
 }
 /* Force text color on inner elements aggressively */
-button[data-baseweb="tab"] * {
+.stTabs [data-baseweb="tab"] * {
     color: #000000 !important;
     font-weight: 800 !important;
 }
-button[data-baseweb="tab"][aria-selected="true"], button[data-baseweb="tab"][aria-selected="true"] * {
+.stTabs [aria-selected="true"], .stTabs [aria-selected="true"] * {
     background: #0066cc !important; 
     color: #ffffff !important; 
     font-weight: 800 !important;
     border-radius: 6px 6px 0 0 !important;
+    border-bottom: none !important;
 }
-button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+.stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background: #f1f5f9 !important; 
 }
-button[data-baseweb="tab"]:hover:not([aria-selected="true"]) * {
+.stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) * {
     color: #000000 !important;
 }
 
