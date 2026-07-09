@@ -1,0 +1,81 @@
+# ============================================================
+# .gitignore — Fake News Detection Project
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+.installed.cfg
+*.so
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+env.bak/
+venv.bak/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Dataset (large files — upload separately or use DVC)
+dataset/*.csv
+dataset/*.tsv
+dataset/*.xlsx
+dataset/*.zip
+
+# Trained Models (large binary files)
+# models/*.pkl    # Uncomment if you don't want to version-control models
+
+# IDE & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.spyderproject.cfg
+.ropeproject
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Misc
+*.bak
+*.tmp
+*.temp
