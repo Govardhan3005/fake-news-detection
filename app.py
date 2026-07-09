@@ -84,11 +84,12 @@ html, body, [class*="css"] {
 /* ═══════ KPI CARDS ═══════ */
 .kpi-row { display: flex; gap: 12px; margin-bottom: 22px; }
 .kpi-card {
-    flex: 1; background: #f0f9ff; border: 1px solid #e0f2fe;
-    border-radius: 12px; padding: 16px 18px; text-align: center;
-    transition: all .2s ease; cursor: default;
+    flex: 1; background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 14px; padding: 18px 20px; text-align: center;
+    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
 }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(14,165,233,.1); }
+.kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.08); border-color: #cbd5e1; }
 .kpi-val { font-size: 1.7rem; font-weight: 900; color: #0f172a; }
 .kpi-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase;
            letter-spacing: 1px; color: #64748b; margin-top: 3px; }
@@ -191,9 +192,9 @@ html, body, [class*="css"] {
 }
 
 /* ═══════ RESULT CARD ═══════ */
-.result-card { border-radius: 14px; padding: 22px 26px; margin-top: 16px; animation: pop .4s ease; }
+.result-card { border-radius: 16px; padding: 24px 28px; margin-top: 16px; animation: pop .5s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.06); }
 @keyframes pop {
-    from { opacity:0; transform:translateY(12px) scale(.98); }
+    from { opacity:0; transform:translateY(16px) scale(.97); }
     to   { opacity:1; transform:translateY(0) scale(1); }
 }
 .card-real { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 1.5px solid #a7f3d0; }
@@ -217,17 +218,18 @@ html, body, [class*="css"] {
 .prob-pill .pl { font-size:.58rem; color:#64748b; text-transform:uppercase;
                  letter-spacing:.6px; font-weight:700; }
 .prob-pill .pv { font-size:.92rem; font-weight:800; margin-top:2px; }
-.pv-real{color:#059669}.pv-fake{color:#dc2626}.pv-mode{color:#0ea5e9;font-size:.72rem!important}
+.pv-real{color:#059669}.pv-fake{color:#dc2626}.pv-mode{color:#1e293b;font-size:.75rem!important;font-weight:800;}
 
 /* ═══════ ANALYTICS PANEL ═══════ */
 .analytics-panel {
-    background: #f0f9ff; border: 1.5px solid #e0f2fe; border-radius: 14px;
-    padding: 20px 22px; margin-top: 16px;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
+    padding: 24px 28px; margin-top: 16px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.03);
 }
 .analytics-title {
-    font-size: .72rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: #0284c7; margin-bottom: 14px;
+    font-size: .75rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: #1e293b; margin-bottom: 16px;
     display: flex; align-items: center; gap: 6px;
+    border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;
 }
 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .metric-item {
@@ -267,8 +269,9 @@ html, body, [class*="css"] {
 .bb-fake { background: #fef2f2; border: 1.5px solid #fecaca; }
 
 /* ═══════ MISC ═══════ */
-.section-label { font-size:.7rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.8px; color:#0284c7; margin-bottom:10px; }
+.section-label { font-size:.75rem; font-weight:800; text-transform:uppercase;
+  letter-spacing:1px; color:#1e293b; margin-bottom:14px; 
+  border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
 .empty-state { text-align:center; padding:48px 20px; }
 .empty-icon  { font-size:2.5rem; margin-bottom:10px; opacity:.4; }
 .empty-text  { font-size:.88rem; color:#1e293b; line-height:1.7; }
@@ -537,7 +540,7 @@ st.markdown(f"""<div class="kpi-row">
   <div class="kpi-card"><div class="kpi-val">{st.session_state.total}</div><div class="kpi-lbl">Articles Analyzed</div></div>
   <div class="kpi-card"><div class="kpi-val" style="color:#059669">{st.session_state.n_real}</div><div class="kpi-lbl">Real</div></div>
   <div class="kpi-card"><div class="kpi-val" style="color:#dc2626">{st.session_state.n_fake}</div><div class="kpi-lbl">Fake</div></div>
-  <div class="kpi-card"><div class="kpi-val" style="color:#0ea5e9">{'ML' if IS_LIVE else 'Demo'}</div><div class="kpi-lbl">Engine</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:#1e293b">{'ML' if IS_LIVE else 'Demo'}</div><div class="kpi-lbl">Engine</div></div>
 </div>""", unsafe_allow_html=True)
 
 
