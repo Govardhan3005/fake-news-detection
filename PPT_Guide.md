@@ -10,9 +10,7 @@
 **Subtitle:** An AI-Powered Web Application to Classify News as REAL or FAKE using NLP & ML
 
 **Details:**
-- Presented by: Govardhan N
 - Technology: Python | Scikit-learn | NLTK | Streamlit
-- GitHub: github.com/Govardhan3005/fake-news-detection
 
 ---
 

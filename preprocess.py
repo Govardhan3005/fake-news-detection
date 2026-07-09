@@ -2,7 +2,6 @@
 ============================================================
 preprocess.py — Text Preprocessing Module
 ============================================================
-Author      : Govardhan N
 Project     : Fake News Detection using Machine Learning
 Description : Reusable, modular text preprocessing pipeline.
               All cleaning steps are encapsulated here so that

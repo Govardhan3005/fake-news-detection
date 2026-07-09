@@ -251,13 +251,7 @@ python predict.py "Breaking: Scientists discover new planet in solar system"
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
----
 
-## 👤 Author
-
-**Govardhan N**
-
----
 
 <div align="center">
 

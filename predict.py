@@ -2,7 +2,6 @@
 ============================================================
 predict.py — Prediction Module
 ============================================================
-Author      : Govardhan N
 Project     : Fake News Detection using Machine Learning
 Description : Load saved model + vectorizer and predict
               whether a given news article is REAL or FAKE.
