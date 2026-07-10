@@ -596,13 +596,7 @@ with tab1:
 
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-    SAMPLES = {"— Load a sample article —":"",
-        "✅ Real — MIT Study":"Researchers at MIT published a new study in Nature journal showing a breakthrough in quantum error correction. The findings were independently verified by Stanford and Cambridge. According to the official press release, the team achieved 94% accuracy on standard benchmarks.",
-        "✅ Real — RBI Policy":"The Reserve Bank of India issued an official statement confirming a 25 basis point rate cut. The Governor's press conference presented data showing inflation at 4.1% for the third consecutive quarter. Multiple agencies including Reuters and AP confirmed the report.",
-        "🚫 Fake — Conspiracy":"SHOCKING: Government secretly putting microchips in vaccines EXPOSED!! Deep state hiding the truth from billions — wake up sheeple!! Share before they delete this! The illuminati are behind everything!!",
-        "🚫 Fake — Health":"Doctors don't want you to know: turmeric water CURES cancer in 3 days! Big Pharma has been hiding this for 50 years! Share this miracle cure now before it gets banned!!"}
-    pk = st.selectbox("sample", list(SAMPLES.keys()), label_visibility="collapsed")
-    if pk != "— Load a sample article —" and SAMPLES[pk]: st.session_state.input = SAMPLES[pk]; st.rerun()
+
 
     text_input = st.text_area("text_in", value=st.session_state.input,
         placeholder="Paste or type a news article here for ML classification + real-time analytics…",
