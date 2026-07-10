@@ -667,7 +667,6 @@ with tab2:
                         st.session_state.total+=1
                         if res["label"]=="REAL": st.session_state.n_real+=1
                         else: st.session_state.n_fake+=1
-                        st.rerun()
             else:
                 st.markdown("""<div class="empty-state" style="border:2px dashed #bae6fd;border-radius:12px;">
                   <div class="empty-icon">📸</div><div class="empty-text">Upload a newspaper clipping,<br>screenshot, or social media post</div></div>""", unsafe_allow_html=True)
@@ -701,7 +700,6 @@ with tab3:
                 st.session_state.total+=1
                 if res["label"]=="REAL": st.session_state.n_real+=1
                 else: st.session_state.n_fake+=1
-                st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
