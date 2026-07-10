@@ -538,7 +538,7 @@ st.markdown(f"""<div class="kpi-row">
   <div class="kpi-card"><div class="kpi-val">{st.session_state.total}</div><div class="kpi-lbl">Articles Analyzed</div></div>
   <div class="kpi-card"><div class="kpi-val" style="color:#059669">{st.session_state.n_real}</div><div class="kpi-lbl">Real</div></div>
   <div class="kpi-card"><div class="kpi-val" style="color:#dc2626">{st.session_state.n_fake}</div><div class="kpi-lbl">Fake</div></div>
-  <div class="kpi-card"><div class="kpi-val" style="color:#1e293b">{'ML' if IS_LIVE else 'Demo'}</div><div class="kpi-lbl">Engine</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:#38bdf8">{'ML' if IS_LIVE else 'Demo'}</div><div class="kpi-lbl">Engine</div></div>
 </div>""", unsafe_allow_html=True)
 
 
